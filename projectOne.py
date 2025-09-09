@@ -6,8 +6,9 @@ print("Welcome to Running LAB Tracker")
 while True:
     print("1. Add Route")
     print("2. Log Run")
-    
-    choice = input("Pick an option (1-2): ")
+    print("3. Show Runs")
+    print("4. Quit")
+    choice = input("Pick an option (1-4): ")
 
     if choice == "1":
         name = input("Enter route name: ")
@@ -30,7 +31,19 @@ while True:
         runs.append([r, routes[r], t])
         print("Logged: " + r + " - " + str(routes[r]) + " km in " + str(t) + " minutes.")
 
-    
+    elif choice == "3":
+        if not runs:
+            print("No runs logged yet.")
+            continue
+        print("\n=== Your Runs ===")
+        for run in runs:
+            pace = run[2] / run[1]
+            print(run[0] + ": " + str(run[1]) + " km in " + str(run[2]) +
+                  " min (Pace " + str(round(pace, 2)) + " min/km)")
+
+    elif choice == "4":
+        print("Goodbye! Keep running strong.")
+        break
 
     else:
         print("Invalid choice, try again.")
