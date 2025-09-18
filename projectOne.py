@@ -10,7 +10,7 @@ routes = {}
 runs = []
 
 # Load data if file exists
-if os.path.exists(DATA_FILE):
+if os.path.exists(DATA_FILE): 
     with open(DATA_FILE, "r") as f:
         data = json.load(f)
         routes = data.get("routes", {})
@@ -19,8 +19,8 @@ if os.path.exists(DATA_FILE):
 print("Welcome to Running LAB Tracker")
 
 def save_data():
-    with open(DATA_FILE, "w") as f:
-        json.dump({"routes": routes, "runs": runs}, f)
+    with open(DATA_FILE, "w") as f:   #opens file for writing
+        json.dump({"routes": routes, "runs": runs}, f) #writes out both routes and runs in JSON format
 
 while True:
     print("\n1. Add Route")
@@ -34,7 +34,7 @@ while True:
         dist = float(input("Enter distance (km): "))
         routes[name] = dist
         print("Route '" + name + "' (" + str(dist) + " km) added.")
-        save_data()
+        save_data() #immediatley stores data when save_data()
 
     elif choice == "2":
         if not routes:
