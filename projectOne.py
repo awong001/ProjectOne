@@ -3,7 +3,7 @@ import os
 import datetime
 
 # File to store data
-DATA_FILE = "tracker_data.json"
+DATA_FILE = "runninglog_data.json"
 
 # Initialize
 routes = {}
