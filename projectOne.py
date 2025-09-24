@@ -69,4 +69,61 @@ while True:
 
     else:
         print("Invalid choice, try again.")
-#the
+        
+#Countdown Code
+
+import time
+from datetime import datetime
+
+
+RaceDay = input("Enter your race date and time (YYYY-MM-DD HH:MM:SS): ")
+
+
+race_type = input("What type of race are you running? (5k, 10k, half marathon, full marathon): ")
+
+# converting the input string to a datetime object
+RaceDay_time = datetime.strptime(RaceDay, "%Y-%m-%d %H:%M:%S")
+
+print(f"Countdown to: {RaceDay_time} — {race_type}")
+
+# Weekly mileage recommendations by race type 
+mileage_plan = {
+    "5k": (15, 25),
+    "10k": (20, 30),
+    "half marathon": (25, 40),
+    "full marathon": (35, 55)
+}
+
+while True:
+   
+    now = datetime.now()
+
+    # calculate the time until race day
+    remaining = RaceDay_time - now
+
+    if remaining.total_seconds() <= 0:
+        print(f"\nIt's Race Day! Good luck with your {race_type}! 🏃‍♂️🎉")
+        break
+
+    # get days, hours, minutes, seconds
+    days = remaining.days
+    hours, remainder = divmod(remaining.seconds, 3600)
+    minutes, seconds = divmod(remainder, 60)
+
+    # calculate how many weeks until the race
+    weeks_left = days // 7
+
+    # getting recommended mileage for each race type
+    if race_type in mileage_plan:
+        low, high = mileage_plan[race_type]
+        # adjust mileage based on how close the race is closer = higher mileage
+        factor = 1 - min(weeks_left / 16, 1)  
+        recommended = int(low + factor * (high - low))
+        mileage_msg = f" | Recommended weekly mileage: ~{recommended} miles"
+    else:
+        mileage_msg = ""
+
+    
+    print(f"\r{days} days {hours:02}:{minutes:02}:{seconds:02} left until your {race_type}!!{mileage_msg}", end="")
+
+    time.sleep(1)
