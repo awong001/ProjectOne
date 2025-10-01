@@ -1,0 +1,76 @@
+import tkinter as tk
+from tkinter import ttk, messagebox
+
+def calculate_calories():
+    try:
+        gender = gender_var.get()
+        age = int(age_entry.get())
+        height = float(height_entry.get())
+        weight = float(weight_entry.get())
+
+        # Mifflin-St Jeor Equation (U.S. units)
+        if gender == "Male":
+            bmr = 66 + (6.23 * weight) + (12.7 * height) - (6.8 * age)
+        elif gender == "Female":
+            bmr = 655 + (4.35 * weight) + (4.7 * height) - (4.7 * age)
+        else:
+            messagebox.showerror("Input Error", "Please select a gender.")
+            return
+
+        maintenance = round(bmr)
+        gain = maintenance + 500
+        lose = maintenance - 500
+
+        result_text = (
+            f"⚖️ Maintain weight: {maintenance} kcal/day\n"
+            f"⬆️ Gain weight: {gain} kcal/day\n"
+            f"⬇️ Lose weight: {lose} kcal/day"
+        )
+        result_label.config(text=result_text)
+
+    except ValueError:
+        messagebox.showerror("Input Error", "Please enter valid numbers.")
+
+# --- GUI Setup ---
+root = tk.Tk()
+root.title("Running LAB - Calorie Calculator")
+root.geometry("350x400")
+root.resizable(False, False)
+
+# Title
+tk.Label(root, text="Running LAB", font=("Arial", 20, "bold")).pack(pady=15)
+
+# Input Frame
+frame = tk.Frame(root)
+frame.pack(pady=5)
+
+# Gender
+tk.Label(frame, text="Gender:", font=("Arial", 12)).grid(row=0, column=0, sticky="e", padx=10, pady=5)
+gender_var = tk.StringVar()
+gender_combo = ttk.Combobox(frame, textvariable=gender_var, values=["Male", "Female"], state="readonly", width=17)
+gender_combo.grid(row=0, column=1, pady=5)
+
+# Age
+tk.Label(frame, text="Age (years):", font=("Arial", 12)).grid(row=1, column=0, sticky="e", padx=10, pady=5)
+age_entry = ttk.Entry(frame, width=20)
+age_entry.grid(row=1, column=1, pady=5)
+
+# Height
+tk.Label(frame, text="Height (inches):", font=("Arial", 12)).grid(row=2, column=0, sticky="e", padx=10, pady=5)
+height_entry = ttk.Entry(frame, width=20)
+height_entry.grid(row=2, column=1, pady=5)
+
+# Weight
+tk.Label(frame, text="Weight (lbs):", font=("Arial", 12)).grid(row=3, column=0, sticky="e", padx=10, pady=5)
+weight_entry = ttk.Entry(frame, width=20)
+weight_entry.grid(row=3, column=1, pady=5)
+
+# Calculate Button
+calculate_btn = ttk.Button(root, text="Calculate Calories", command=calculate_calories)
+calculate_btn.pack(pady=20)
+
+# Result Label
+result_label = tk.Label(root, text="", font=("Arial", 12), justify="left")
+result_label.pack(pady=10)
+
+root.mainloop()
