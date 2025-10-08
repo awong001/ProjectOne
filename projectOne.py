@@ -1,8 +1,6 @@
 import streamlit as st
 import datetime
 import pandas as pd
-import json
-import os
 
 st.set_page_config(page_title="Running Lab", layout="centered")
 st.title("🏃 Running Lab")
@@ -14,19 +12,11 @@ tab1, tab2, tab3 = st.tabs(["Tracker", "Countdown", "Calories"])
 with tab1:
     st.subheader("Running Tracker")
 
-    DATA_FILE = "running_data.json"  #json file to save data
-
-    #load data if file exists
-    if os.path.exists(DATA_FILE):
-        with open(DATA_FILE, "r") as f:
-            data = json.load(f)
-            st.session_state.routes = data.get("routes", {})
-            st.session_state.runs = data.get("runs", [])
-    else:
-        if "routes" not in st.session_state: #stores data while app is running
-            st.session_state.routes = {}
-        if "runs" not in st.session_state:
-            st.session_state.runs = []
+    
+    if "routes" not in st.session_state: #stores data while app is running
+        st.session_state.routes = {}
+    if "runs" not in st.session_state:
+        st.session_state.runs = []
 
     #add new route
     with st.form("add_route_form"): #allows you to input multiple things before submitting
@@ -37,11 +27,6 @@ with tab1:
             if route_name and route_dist > 0:
                 st.session_state.routes[route_name] = route_dist #saves route to session state
                 st.success(f"✅ Route '{route_name}' added!")
-
-                #save data to json
-                with open(DATA_FILE, "w") as f:
-                    json.dump({"routes": st.session_state.routes, "runs": st.session_state.runs}, f)
-
             else:
                 st.error("Please enter a valid route name and distance.")
 
@@ -55,13 +40,10 @@ with tab1:
                 dist = st.session_state.routes[selected_route] #gets distance of selected route
                 st.session_state.runs.append((selected_route, dist, time_min, today)) #saves run to session state
                 st.success("🏁 Run logged!")
-
-                #save data to json
-                with open(DATA_FILE, "w") as f:
-                    json.dump({"routes": st.session_state.routes, "runs": st.session_state.runs}, f)
-
             else:
                 st.error("Please select a route and enter a valid time.")
+
+    
 
     #show table
     if st.session_state.runs:
