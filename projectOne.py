@@ -1,143 +1,113 @@
+import streamlit as st
+import datetime
+import pandas as pd
 import json
 import os
-import datetime
-import time
 
-# File to store data
-DATA_FILE = "runninglog_data.json"
+st.set_page_config(page_title="Running Lab", layout="centered")
+st.title("🏃 Running Lab")
 
-# Initialize
-routes = {}
-runs = []
+#tabs
+tab1, tab2, tab3 = st.tabs(["Tracker", "Countdown", "Calories"])
 
-# Load data if file exists
-if os.path.exists(DATA_FILE): 
-    with open(DATA_FILE, "r") as f:
-        data = json.load(f)
-        routes = data.get("routes", {})
-        runs = data.get("runs", [])
+#running tracker
+with tab1:
+    st.subheader("Running Tracker")
 
-def save_data():
-    with open(DATA_FILE, "w") as f:   # opens file for writing
-        json.dump({"routes": routes, "runs": runs}, f) # writes out both routes and runs in JSON format
+    DATA_FILE = "running_data.json"  #json file to save data
 
-# ---------------------------
-# Running LAB Tracker
-# ---------------------------
-def running_tracker():
-    print("Welcome to Running LAB Tracker")
-    while True:
-        print("\n1. Add Route")
-        print("2. Log Run")
-        print("3. Show Runs")
-        print("4. Back to Main Menu")
-        choice = input("Pick an option (1-4): ")
+    #load data if file exists
+    if os.path.exists(DATA_FILE):
+        with open(DATA_FILE, "r") as f:
+            data = json.load(f)
+            st.session_state.routes = data.get("routes", {})
+            st.session_state.runs = data.get("runs", [])
+    else:
+        if "routes" not in st.session_state: #stores data while app is running
+            st.session_state.routes = {}
+        if "runs" not in st.session_state:
+            st.session_state.runs = []
 
-        if choice == "1":
-            name = input("Enter route name: ")
-            dist = float(input("Enter distance (km): "))
-            routes[name] = dist
-            print("Route '" + name + "' (" + str(dist) + " km) added.")
-            save_data()
+    #add new route
+    with st.form("add_route_form"): #allows you to input multiple things before submitting
+        route_name = st.text_input("Route Name")
+        route_dist = st.number_input("Distance (mi)", min_value=0.0, step=0.1)
+        add_route = st.form_submit_button("Add Route")
+        if add_route:
+            if route_name and route_dist > 0:
+                st.session_state.routes[route_name] = route_dist #saves route to session state
+                st.success(f"✅ Route '{route_name}' added!")
 
-        elif choice == "2":
-            if not routes:
-                print("No routes yet! Please add one first.")
-                continue
-            print("Available routes:")
-            for r in routes:
-                print(" - " + r + " (" + str(routes[r]) + " km)")
-            r = input("Which route did you run? ")
-            if r not in routes:
-                print("Route not found.")
-                continue
-            t = float(input("How many minutes did it take? "))
-            date = datetime.date.today().isoformat()
-            runs.append([r, routes[r], t, date])
-            print("Logged: " + r + " - " + str(routes[r]) + " km in " + str(t) + " minutes on " + date)
-            save_data()
+                #save data to json
+                with open(DATA_FILE, "w") as f:
+                    json.dump({"routes": st.session_state.routes, "runs": st.session_state.runs}, f)
 
-        elif choice == "3":
-            if not runs:
-                print("No runs logged yet.")
-                continue
-            print("\n=== Your Runs ===")
-            for run in runs: #run[0]=route name run[1]=distance run[2]=time in minutes run[3]=date of run
-                pace = run[2] / run[1]
-                print(run[3] + " - " + run[0] + ": " + str(run[1]) + " km in " + str(run[2]) +
-                      " min (Pace " + str(round(pace, 2)) + " min/km)")
+            else:
+                st.error("Please enter a valid route name and distance.")
 
-        elif choice == "4":
-            print("Returning to Main Menu...")
-            break
-        else:
-            print("Invalid choice, try again.")
+    #log a run
+    if st.session_state.routes:
+        selected_route = st.selectbox("Select Route", list(st.session_state.routes.keys())) #dropdown menu
+        time_min = st.number_input("Time (minutes)", min_value=0.0, step=0.1)
+        if st.button("Log Run"): 
+            if selected_route and time_min > 0:
+                today = datetime.date.today().isoformat() #gets current date
+                dist = st.session_state.routes[selected_route] #gets distance of selected route
+                st.session_state.runs.append((selected_route, dist, time_min, today)) #saves run to session state
+                st.success("🏁 Run logged!")
 
-# ---------------------------
-# Race Day Countdown
-# ---------------------------
-def race_countdown():
-    RaceDay = input("Enter your race date and time (YYYY-MM-DD HH:MM:SS): ")
-    race_type = input("What type of race are you running? (5k, 10k, half marathon, full marathon): ")
+                #save data to json
+                with open(DATA_FILE, "w") as f:
+                    json.dump({"routes": st.session_state.routes, "runs": st.session_state.runs}, f)
 
-    # converting the input string to a datetime object
-    RaceDay_time = datetime.datetime.strptime(RaceDay, "%Y-%m-%d %H:%M:%S")
+            else:
+                st.error("Please select a route and enter a valid time.")
 
-    print(f"Countdown to: {RaceDay_time} — {race_type}")
+    #show table
+    if st.session_state.runs:
+        df = pd.DataFrame(st.session_state.runs, columns=["Route", "Dist (mi)", "Time (min)", "Date"]) #lists runs in scrollable table
+        df["Pace (min/mi)"] = df["Time (min)"] / df["Dist (mi)"] #sets pace
+        st.dataframe(df, use_container_width=True) #format
+        st.line_chart(df[["Dist (mi)", "Time (min)", "Pace (min/mi)"]]) #line chart of distance, time, and pace
 
-    # Weekly mileage recommendations by race type 
-    mileage_plan = {
-        "5k": (15, 25),
-        "10k": (20, 30),
-        "half marathon": (25, 40),
-        "full marathon": (35, 55)
-    }
+#race countdown
+with tab2:
+    st.subheader("Race Countdown")
 
-    while True:
-        now = datetime.datetime.now()
-        remaining = RaceDay_time - now
+    race_input = st.text_input("Enter Race Date & Time (YYYY-MM-DD HH:MM)")
+    if st.button("Start Countdown"):
+        try:
+            race = datetime.datetime.strptime(race_input, "%Y-%m-%d %H:%M") #converts string to datetime object
+            diff = race - datetime.datetime.now() #calculates time difference
+            if diff.total_seconds() <= 0:
+                st.success("🎉 It's Race Day!")
+            else:
+                days = diff.days
+                hrs, rem = divmod(diff.seconds, 3600) #divides seconds into hours and remainder
+                mins, secs = divmod(rem, 60) #divides remainder into minutes and seconds
+                st.info(f"⏱️ {days} days, {hrs:02}:{mins:02}:{secs:02} remaining") #formats time
+        except: 
+            st.error("Invalid date format! Use YYYY-MM-DD HH:MM")
 
-        if remaining.total_seconds() <= 0:
-            print(f"\nIt's Race Day! Good luck with your {race_type}! 🏃‍♂️🎉")
-            break
+#calorie calculator
+with tab3:
+    st.subheader("Calorie Calculator")
 
-        days = remaining.days
-        hours, remainder = divmod(remaining.seconds, 3600)
-        minutes, seconds = divmod(remainder, 60)
+    gender = st.selectbox("Gender", ["Male", "Female"])
+    age = st.number_input("Age", min_value=1, max_value=120, step=1)
+    height = st.number_input("Height (in)", min_value=1.0, step=0.1)
+    weight = st.number_input("Weight (lbs)", min_value=1.0, step=0.1)
 
-        weeks_left = days // 7
+    if st.button("Calculate Calories"):
+        try:
+            if gender == "Male":
+                bmr = 66 + 6.23 * weight + 12.7 * height - 6.8 * age
+            else:
+                bmr = 655 + 4.35 * weight + 4.7 * height - 4.7 * age
+            st.write(f"**Maintain:** {round(bmr)} kcal/day")
+            st.write(f"**Gain:** {round(bmr + 500)} kcal/day")
+            st.write(f"**Lose:** {round(bmr - 500)} kcal/day")
+        except:
+            st.error("Please fill all fields correctly.")
 
-        if race_type in mileage_plan:
-            low, high = mileage_plan[race_type]
-            factor = 1 - min(weeks_left / 16, 1)  
-            recommended = int(low + factor * (high - low))
-            mileage_msg = f" | Recommended weekly mileage: ~{recommended} miles"
-        else:
-            mileage_msg = ""
-
-        print(f"\r{days} days {hours:02}:{minutes:02}:{seconds:02} left until your {race_type}!!{mileage_msg}", end="")
-        time.sleep(1)
-
-# ---------------------------
-# Main Menu
-# ---------------------------
-def main():
-    while True:
-        print("\n==== Main Menu ====")
-        print("1. Running LAB Tracker")
-        print("2. Race Day Countdown")
-        print("3. Quit")
-        choice = input("Pick an option (1-3): ")
-
-        if choice == "1":
-            running_tracker()
-        elif choice == "2":
-            race_countdown()
-        elif choice == "3":
-            print("Goodbye! Keep running strong.")
-            break
-        else:
-            print("Invalid choice, try again.")
-
-if __name__ == "__main__":
-    main()
+#copy into terminal to run:  streamlit run /Users/aidenwong/Documents/running_lab.py
