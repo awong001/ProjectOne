@@ -1,0 +1,214 @@
+import tkinter as tk
+from tkinter import ttk, messagebox
+
+def calculate_results():
+    try:
+        gender = gender_var.get()
+        age = int(age_entry.get())
+        height_in = float(height_entry.get())
+        weight_lb = float(weight_entry.get())
+
+        if height_in <= 0 or weight_lb <= 0 or age <= 0:
+            messagebox.showerror("Input Error", "Please enter positive numbers for age, height, and weight.")
+            return
+
+        if gender not in ("Male", "Female"):
+            messagebox.showerror("Input Error", "Please select a gender.")
+            return
+
+        # Convert to metric
+        weight_kg = weight_lb * 0.45359237
+        height_cm = height_in * 2.54
+        height_m = height_in * 0.0254
+
+        # BMR - Mifflin–St Jeor (metric)
+        if gender == "Male":
+            bmr = 10.0 * weight_kg + 6.25 * height_cm - 5.0 * age + 5.0
+            gender_letter.config(text="M")
+        else:
+            bmr = 10.0 * weight_kg + 6.25 * height_cm - 5.0 * age - 161.0
+            gender_letter.config(text="F")
+
+        maintenance = round(bmr)
+        gain = maintenance + 500
+        lose = maintenance - 500
+
+        # BMI (correct conversion and formula)
+        if height_m <= 0:
+            messagebox.showerror("Input Error", "Height must be greater than zero.")
+            return
+        bmi_value = weight_kg / (height_m * height_m)
+        bmi = round(bmi_value, 1)
+
+        # Determine status
+        if bmi < 18.5:
+            status = "Underweight"
+            status_color = "#4da6ff"
+        elif bmi < 25.0:
+            status = "Healthy"
+            status_color = "#58d68d"
+        elif bmi < 30.0:
+            status = "Overweight"
+            status_color = "#f4d03f"
+        else:
+            status = "Obese"
+            status_color = "#e74c3c"
+
+        # Update textual results (plain ASCII)
+        result_label.config(
+            text=f"Maintain: {maintenance} kcal/day\nGain: {gain} kcal/day\nLose: {lose} kcal/day"
+        )
+        bmi_label.config(text=f"BMI: {bmi}  -  {status}", fg=status_color)
+
+        # Draw visuals
+        draw_health_meter(bmi_value, status_color)
+        draw_calorie_bars(lose, maintenance, gain)
+
+    except ValueError:
+        messagebox.showerror("Input Error", "Please enter valid numbers for age, height (inches), and weight (lbs).")
+
+def draw_health_meter(bmi, color):
+    meter.delete("all")
+    # Visual bounds
+    start_x = 30
+    end_x = 370
+    y0 = 60
+    y1 = 110
+
+    # Map BMI to x position using a fixed display range
+    min_bmi = 12.0
+    max_bmi = 42.0
+    def bmi_to_x(val):
+        # clamp then map linearly
+        v = max(min_bmi, min(max_bmi, val))
+        return start_x + (v - min_bmi) / (max_bmi - min_bmi) * (end_x - start_x)
+
+    # Draw segments for categories
+    x_under_end = bmi_to_x(18.5)
+    x_healthy_end = bmi_to_x(25.0)
+    x_over_end = bmi_to_x(30.0)
+
+    meter.create_rectangle(start_x, y0, x_under_end, y1, fill="#d7eefc", outline="")
+    meter.create_rectangle(x_under_end, y0, x_healthy_end, y1, fill="#e8f7ea", outline="")
+    meter.create_rectangle(x_healthy_end, y0, x_over_end, y1, fill="#fff6d6", outline="")
+    meter.create_rectangle(x_over_end, y0, end_x, y1, fill="#ffe6e6", outline="")
+
+    # Divider lines
+    meter.create_line(x_under_end, y0, x_under_end, y1, fill="#cccccc")
+    meter.create_line(x_healthy_end, y0, x_healthy_end, y1, fill="#cccccc")
+    meter.create_line(x_over_end, y0, x_over_end, y1, fill="#cccccc")
+
+    # Pointer position
+    x_pos = bmi_to_x(bmi)
+    # Triangle pointer
+    pointer = (x_pos, y0 - 12, x_pos - 8, y0 + 2, x_pos + 8, y0 + 2)
+    meter.create_polygon(pointer, fill=color, outline="#222222")
+    # BMI text above pointer
+    meter.create_text(x_pos, y0 - 20, text=f"{round(bmi,1)}", font=("Arial", 10, "bold"))
+
+    # Labels
+    meter.create_text((start_x + x_under_end) / 2, y1 + 16, text="Underweight", font=("Arial", 9))
+    meter.create_text((x_under_end + x_healthy_end) / 2, y1 + 16, text="Healthy", font=("Arial", 9))
+    meter.create_text((x_healthy_end + x_over_end) / 2, y1 + 16, text="Overweight", font=("Arial", 9))
+    meter.create_text((x_over_end + end_x) / 2, y1 + 16, text="Obese", font=("Arial", 9))
+
+    # Frame / label
+    meter.create_rectangle(20, 40, 380, 140, outline="#333333", width=2)
+
+def draw_calorie_bars(lose, maintain, gain):
+    bars.delete("all")
+    # layout
+    left = 40
+    bar_width = 70
+    spacing = 40
+    max_height = 140
+    base_y = 170
+
+    max_val = max(gain, maintain, lose, 1)
+    scale = max_height / max_val
+
+    # lose bar
+    h_lose = lose * scale
+    x0 = left
+    bars.create_rectangle(x0, base_y - h_lose, x0 + bar_width, base_y, fill="#74a4ff", outline="#222")
+    bars.create_text(x0 + bar_width/2, base_y + 14, text="Lose", font=("Arial", 10))
+    bars.create_text(x0 + bar_width/2, base_y - h_lose - 10, text=str(lose), font=("Arial", 9))
+
+    # maintain bar
+    x1 = x0 + bar_width + spacing
+    h_maint = maintain * scale
+    bars.create_rectangle(x1, base_y - h_maint, x1 + bar_width, base_y, fill="#ffd27a", outline="#222")
+    bars.create_text(x1 + bar_width/2, base_y + 14, text="Maintain", font=("Arial", 10))
+    bars.create_text(x1 + bar_width/2, base_y - h_maint - 10, text=str(maintain), font=("Arial", 9))
+
+    # gain bar
+    x2 = x1 + bar_width + spacing
+    h_gain = gain * scale
+    bars.create_rectangle(x2, base_y - h_gain, x2 + bar_width, base_y, fill="#9ee59f", outline="#222")
+    bars.create_text(x2 + bar_width/2, base_y + 14, text="Gain", font=("Arial", 10))
+    bars.create_text(x2 + bar_width/2, base_y - h_gain - 10, text=str(gain), font=("Arial", 9))
+
+    # border
+    bars.create_rectangle(20, base_y - max_height - 20, 380, base_y + 30, outline="#333333", width=2)
+
+# --- UI Setup ---
+root = tk.Tk()
+root.title("Running LAB - Calorie & BMI")
+root.geometry("420x560")
+root.configure(bg="#1e1f29")
+root.resizable(False, False)
+
+# Title bar (game-like)
+title_frame = tk.Frame(root, bg="#272935", bd=0)
+title_frame.pack(fill="x", pady=(10, 5))
+tk.Label(title_frame, text="RUNNING LAB", font=("Arial Rounded MT Bold", 20), bg="#272935", fg="white").pack(padx=12, pady=8)
+
+# Gender letter (simple, avoids emoji)
+gender_letter = tk.Label(root, text=" ", font=("Arial", 28, "bold"), bg="#1e1f29", fg="white")
+gender_letter.pack(pady=(6, 0))
+
+# Input frame
+frame = tk.Frame(root, bg="#1e1f29")
+frame.pack(pady=8)
+
+def make_label(text, row):
+    tk.Label(frame, text=text, font=("Arial", 12), fg="white", bg="#1e1f29").grid(row=row, column=0, sticky="e", padx=10, pady=6)
+
+make_label("Gender:", 0)
+make_label("Age (yrs):", 1)
+make_label("Height (in):", 2)
+make_label("Weight (lbs):", 3)
+
+gender_var = tk.StringVar()
+gender_combo = ttk.Combobox(frame, textvariable=gender_var, values=["Male", "Female"], state="readonly", width=18)
+gender_combo.grid(row=0, column=1, pady=6)
+age_entry = ttk.Entry(frame, width=20)
+age_entry.grid(row=1, column=1, pady=6)
+height_entry = ttk.Entry(frame, width=20)
+height_entry.grid(row=2, column=1, pady=6)
+weight_entry = ttk.Entry(frame, width=20)
+weight_entry.grid(row=3, column=1, pady=6)
+
+style = ttk.Style()
+style.configure("TButton", font=("Arial", 12, "bold"), padding=6)
+calculate_btn = ttk.Button(root, text="Calculate", command=calculate_results)
+calculate_btn.pack(pady=12)
+
+# Text results (plain ASCII)
+result_label = tk.Label(root, text="", font=("Arial", 12), fg="white", bg="#1e1f29", justify="left")
+result_label.pack(pady=4)
+bmi_label = tk.Label(root, text="", font=("Arial Rounded MT Bold", 14), bg="#1e1f29")
+bmi_label.pack(pady=4)
+
+# Health meter canvas
+meter = tk.Canvas(root, width=400, height=160, bg="#2c2f3b", highlightthickness=0)
+meter.pack(pady=8)
+
+# Calorie bars canvas
+bars = tk.Canvas(root, width=400, height=220, bg="#2c2f3b", highlightthickness=0)
+bars.pack(pady=6)
+
+# Footer
+tk.Label(root, text="Stay fit and run smart!", font=("Arial", 11), fg="#bbbbbb", bg="#1e1f29").pack(side="bottom", pady=8)
+
+root.mainloop()
